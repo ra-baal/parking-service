@@ -4,15 +4,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ParkingApp.Infrastructure.RavenDb;
 using ParkingApp.Infrastructure.Repositories;
+using ParkingApp.Infrastructure.Raven;
 using Raven.Client.Documents;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Add services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 ConfigureRavenDb(builder.Services, builder.Configuration);
+
+// Kontrolery.
+builder.Services.AddControllers();
 
 WebApplication app = builder.Build();
 
@@ -24,18 +27,26 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Add endpoints/controllers here
+// Kontrolery.
+app.MapControllers();
 
 app.Run();
 
 static void ConfigureRavenDb(IServiceCollection services, IConfiguration configuration)
 {
-    string ravenUrl = configuration["RavenDb:Url"] ?? "http://localhost:8080";
-    string databaseName = configuration["RavenDb:Database"] ?? "ParkingDb";
+    RavenDbSettings settings = configuration
+        .GetSection("RavenDb")
+        .Get<RavenDbSettings>() ?? throw new InvalidOperationException("Brak ustawieñ RavenDb.");
 
-    IDocumentStore documentStore = RavenDbFactory.Create(ravenUrl, databaseName);
-    RavenDbInitializer.EnsureDatabaseExists(documentStore, databaseName);
+    services.AddSingleton(settings);
+    services.AddSingleton<RavenDbFactory>();
 
-    services.AddSingleton<IDocumentStore>(documentStore);
+    services.AddSingleton<IDocumentStore>(serviceProvider =>
+    {
+        var factory = serviceProvider.GetRequiredService<RavenDbFactory>();
+        return factory.Create();
+    });
+
     services.AddScoped<IParkingAreaRepository, ParkingAreaRepository>();
+    services.AddHostedService<RavenDbStartupService>();
 }

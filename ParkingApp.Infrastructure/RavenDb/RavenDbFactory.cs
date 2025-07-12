@@ -2,17 +2,24 @@
 
 namespace ParkingApp.Infrastructure.RavenDb;
 
-public static class RavenDbFactory
+public class RavenDbFactory
 {
-    public static IDocumentStore Create(string url, string database)
+    private readonly RavenDbSettings _settings;
+
+    public RavenDbFactory(RavenDbSettings settings)
+    {
+        _settings = settings;
+    }
+
+    public IDocumentStore Create()
     {
         DocumentStore store = new DocumentStore
         {
-            Urls = [url],
-            Database = database
+            Urls = _settings.Urls,
+            Database = _settings.DatabaseName
         };
 
-        store.Initialize(); // Połącz.
+        store.Initialize();
         return store;
     }
 }
