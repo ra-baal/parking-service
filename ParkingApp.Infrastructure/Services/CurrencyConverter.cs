@@ -3,26 +3,34 @@ using ParkingApp.Domain.Services;
 
 namespace ParkingApp.Infrastructure.Services;
 
-public class CurrencyConverter : ICurrencyConverter
+public class CurrencyConverter(
+    HttpClient httpClient,
+    ExchangeRatesApiSettings settings) : ICurrencyConverter
 {
-    private readonly HttpClient _httpClient;
-    private const string ApiKey = "YOUR_API_KEY"; // Secure via secrets manager or environment variable
-    private const string BaseUrl = "https://api.apilayer.com/exchangerates_data";
-
-    public CurrencyConverter(HttpClient httpClient)
+    private string GetUrl(DateOnly? rateDate)
     {
-        _httpClient = httpClient;
+        string dateSegment = rateDate.HasValue ? rateDate.Value.ToString("yyyy-MM-dd") : "latest";
+
+        Uri baseUri = new(settings.BaseUrl);
+        Uri fullUri = new(baseUri, dateSegment);
+
+        UriBuilder builder = new(fullUri)
+        {
+            Query = $"access_key={settings.ApiAccessKey}&symbols=EUR,PLN,USD"
+        };
+
+        string url = builder.ToString();
+        return url;
     }
 
-    public async Task<Dictionary<string, decimal>> ConvertAsync(decimal amount, string baseCurrency, DateTime date)
+    public async Task<Dictionary<string, decimal>> ConvertAsync(decimal amount, string currencyBase, DateOnly? rateDate)
     {
-        string formattedDate = date.ToString("yyyy-MM-dd");
-        string url = $"{BaseUrl}/{formattedDate}?base={baseCurrency}&symbols=EUR,PLN";
+        // Changing base currency is not available in free version on the API.
 
+        string url = GetUrl(rateDate);
         HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("apikey", ApiKey);
 
-        HttpResponseMessage response = await _httpClient.SendAsync(request);
+        HttpResponseMessage response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         ExchangeRateResponse? result = await response.Content.ReadFromJsonAsync<ExchangeRateResponse>();

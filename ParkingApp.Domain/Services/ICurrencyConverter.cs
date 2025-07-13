@@ -2,5 +2,5 @@
 
 public interface ICurrencyConverter
 {
-    Task<Dictionary<string, decimal>> ConvertAsync(decimal amount, string baseCurrency, DateTime date);
+    Task<Dictionary<string, decimal>> ConvertAsync(decimal amount, string currencyBase, DateOnly? rateDate);
 }

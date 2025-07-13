@@ -1,18 +1,28 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using ParkingApp.Infrastructure.RavenDb;
 using ParkingApp.Infrastructure.Repositories;
 using ParkingApp.Infrastructure.Raven;
 using Raven.Client.Documents;
+using ParkingApp.Domain.Services;
+using ParkingApp.Infrastructure.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DevCors", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 ConfigureRavenDb(builder.Services, builder.Configuration);
+ConfigureExchangeRatesApiClient(builder.Services, builder.Configuration);
 
 // Kontrolery.
 builder.Services.AddControllers();
@@ -23,6 +33,11 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseCors("DevCors");
+}
+else
+{
+    app.UseCors();
 }
 
 app.UseHttpsRedirection();
@@ -49,4 +64,14 @@ static void ConfigureRavenDb(IServiceCollection services, IConfiguration configu
 
     services.AddScoped<IParkingAreaRepository, ParkingAreaRepository>();
     services.AddHostedService<RavenDbStartupService>();
+}
+
+static void ConfigureExchangeRatesApiClient(IServiceCollection services, ConfigurationManager configuration)
+{
+    ExchangeRatesApiSettings settings = configuration
+        .GetSection("ExchangeRatesApi")
+        .Get<ExchangeRatesApiSettings>() ?? throw new InvalidOperationException("Missing settings");
+
+    services.AddSingleton(settings);
+    services.AddHttpClient<ICurrencyConverter, CurrencyConverter>();
 }
