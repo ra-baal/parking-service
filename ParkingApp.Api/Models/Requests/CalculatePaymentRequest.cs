@@ -2,7 +2,7 @@
 
 namespace ParkingApp.Api.Models.Requests;
 
-public class PaymentRequest
+public class CalculatePaymentRequest
 {
     [Required]
     public required string ParkingAreaId { get; set; }

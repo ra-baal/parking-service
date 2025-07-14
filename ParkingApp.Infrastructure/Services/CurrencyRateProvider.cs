@@ -4,14 +4,15 @@ using ParkingApp.Domain.Constants;
 
 namespace ParkingApp.Infrastructure.Services;
 
-public class CurrencyConverter(
+public class CurrencyRateProvider(
     HttpClient httpClient,
-    ExchangeRatesApiSettings settings) : ICurrencyConverter
+    ExchangeRatesApiSettings settings) : ICurrencyRateProvider
 {
-    public async Task<Dictionary<string, decimal>> ConvertAsync(decimal amount, string currencyBase, DateOnly? rateDate)
+    public async Task<Dictionary<string, decimal>> GetExchangeRateAsync(
+        string _currencyBase, // Changing base currency is not available in free version of the API. Documantation: The default base currency is EUR.
+        IReadOnlyCollection<string> targetCurrencies,
+        DateOnly? rateDate)
     {
-        // Changing base currency is not available in free version of the API.
-
         string url = GetUrl(rateDate);
         HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
 
@@ -27,17 +28,9 @@ public class CurrencyConverter(
         }
 
         ExchangeRateResponse? result = await response.Content.ReadFromJsonAsync<ExchangeRateResponse>();
-        Dictionary<string, decimal> converted = new();
+        Dictionary<string, decimal> rates = result.Rates;
 
-        if (result?.Rates is not null)
-        {
-            foreach ((string currency, decimal rate) in result.Rates)
-            {
-                converted[currency] = Math.Round(amount * rate, 2);
-            }
-        }
-
-        return converted;
+        return rates;
     }
 
     private string GetUrl(DateOnly? rateDate)

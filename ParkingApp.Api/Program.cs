@@ -24,6 +24,9 @@ builder.Services.AddSwaggerGen();
 ConfigureRavenDb(builder.Services, builder.Configuration);
 ConfigureExchangeRatesApiClient(builder.Services, builder.Configuration);
 
+builder.Services.AddScoped<PaymentCalculator>();
+builder.Services.AddScoped<CurrencyConverter>();
+
 // Kontrolery.
 builder.Services.AddControllers();
 
@@ -73,5 +76,5 @@ static void ConfigureExchangeRatesApiClient(IServiceCollection services, Configu
         .Get<ExchangeRatesApiSettings>() ?? throw new InvalidOperationException("Missing settings");
 
     services.AddSingleton(settings);
-    services.AddHttpClient<ICurrencyConverter, CurrencyConverter>();
+    services.AddHttpClient<ICurrencyRateProvider, CurrencyRateProvider>();
 }

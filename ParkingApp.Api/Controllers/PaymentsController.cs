@@ -13,15 +13,11 @@ namespace ParkingApp.Api.Controllers;
 [Route("api/[controller]")]
 public class PaymentsController(
     IParkingAreaRepository areaRepository,
-    ICurrencyConverter currencyConverter) : ControllerBase
+    PaymentCalculator calculator) : ControllerBase
 {
-    private readonly PaymentCalculator calculator = new();
-
     [HttpPost("calculate")]
-    public async Task<ActionResult<PaymentResultDto>> Calculate([FromBody] PaymentRequest request)
+    public async Task<ActionResult<PaymentDto>> Calculate([FromBody] CalculatePaymentRequest request)
     {
-        DateTimeOffset now = DateTimeOffset.Now;
-
         ParkingArea? area = await areaRepository.GetByIdAsync(request.ParkingAreaId);
         if (area == null) return NotFound("Id not found.");
 
@@ -29,19 +25,12 @@ public class PaymentsController(
         {
             ParkingTime parkingTime = new ParkingTime(request.StartTime, request.EndTime);
 
-            decimal finalUsd = calculator.Calculate(area, parkingTime);
+            decimal amountUSD = calculator.Calculate(area, parkingTime);
 
-            DateOnly? rateDate = parkingTime.Date < DateOnly.FromDateTime(now.Date) 
-                ? DateOnly.FromDateTime(request.EndTime.Date) 
-                : null;
-
-            Dictionary<string, decimal> converted = await currencyConverter.ConvertAsync(finalUsd, CurrencyCodes.USD, rateDate);
-
-            PaymentResultDto result = new PaymentResultDto
+            PaymentDto result = new()
             {
-                AmountUSD = finalUsd,
-                AmountEUR = converted.ContainsKey(CurrencyCodes.EUR) ? converted[CurrencyCodes.EUR] : null,
-                AmountPLN = converted.ContainsKey(CurrencyCodes.PLN) ? converted[CurrencyCodes.PLN] : null
+                Amount = amountUSD,
+                Currency = CurrencyCodes.USD
             };
 
             return Ok(result);

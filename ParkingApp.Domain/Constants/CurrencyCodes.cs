@@ -7,4 +7,6 @@ public static class CurrencyCodes
     public const string PLN = "PLN";
 
     public static readonly string[] All = { USD, EUR, PLN };
+
+    public static bool Exists(string currencyCode) => All.Contains(currencyCode);
 } 
