@@ -1,26 +1,23 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using ParkingApp.Api.Models;
 using ParkingApp.Domain.Entities;
 using ParkingApp.Infrastructure.Repositories;
+using ParkingApp.Api.Mappers;
+using ParkingApp.Api.Models.Dtos;
+using ParkingApp.Api.Models.Requests;
+using ParkingApp.Domain.ValueObjects;
 
 namespace ParkingApp.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ParkingAreasController : ControllerBase
+public class ParkingAreasController(
+    IParkingAreaRepository repository) : ControllerBase
 {
-    private readonly IParkingAreaRepository _repository;
-
-    public ParkingAreasController(IParkingAreaRepository repository)
-    {
-        _repository = repository;
-    }
-
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ParkingAreaDto>>> GetAll()
     {
-        IEnumerable<ParkingArea> areas = await _repository.GetAllAsync();
-        return Ok(areas.Select(ToDto));
+        IEnumerable<ParkingArea> areas = await repository.GetAllAsync();
+        return Ok(areas.Select(ParkingAreaMapper.ToDto));
     }
 
     [HttpGet("{id}")]
@@ -28,24 +25,25 @@ public class ParkingAreasController : ControllerBase
     {
         string parkingAreaId = $"ParkingAreas/{id}";
 
-        ParkingArea? area = await _repository.GetByIdAsync(parkingAreaId);
+        ParkingArea? area = await repository.GetByIdAsync(parkingAreaId);
         if (area == null) return NotFound();
-        return Ok(ToDto(area));
+
+        ParkingAreaDto dto = ParkingAreaMapper.ToDto(area);
+        return Ok(dto);
     }
 
     [HttpPost]
     public async Task<ActionResult> Create(CreateParkingAreaRequest request)
     {
-        ParkingArea newArea = new ParkingArea
+        ParkingArea newArea = new()
         {
             Name = request.Name,
-            WeekdayRate = request.WeekdayRate,
-            WeekendRate = request.WeekendRate,
+            Rate = new ParkingRate(request.WeekdayRate, request.WeekendRate),
             DiscountPercentage = request.DiscountPercentage
         };
-
-        await _repository.AddAsync(newArea);
-        return CreatedAtAction(nameof(GetById), new { id = newArea.Id }, ToDto(newArea));
+            
+        await repository.AddAsync(newArea);
+        return CreatedAtAction(nameof(GetById), new { id = newArea.Id }, ParkingAreaMapper.ToDto(newArea));
     }
 
     [HttpPut("{id}")]
@@ -53,15 +51,14 @@ public class ParkingAreasController : ControllerBase
     {
         string parkingAreaId = $"ParkingAreas/{id}";
 
-        ParkingArea? existing = await _repository.GetByIdAsync(parkingAreaId);
-        if (existing == null) return NotFound();
+        ParkingArea? existing = await repository.GetByIdAsync(parkingAreaId);
+        if (existing is null) return NotFound();
 
         existing.Name = request.Name;
-        existing.WeekdayRate = request.WeekdayRate;
-        existing.WeekendRate = request.WeekendRate;
+        existing.Rate = new ParkingRate(request.WeekdayRate, request.WeekendRate);
         existing.DiscountPercentage = request.DiscountPercentage;
 
-        await _repository.UpdateAsync(existing);
+        await repository.UpdateAsync(existing);
         return NoContent();
     }
 
@@ -70,19 +67,10 @@ public class ParkingAreasController : ControllerBase
     {
         string parkingAreaId = $"ParkingAreas/{id}";
 
-        ParkingArea? existing = await _repository.GetByIdAsync(parkingAreaId);
-        if (existing == null) return NotFound();
+        ParkingArea? existing = await repository.GetByIdAsync(parkingAreaId);
+        if (existing is null) return NotFound();
 
-        await _repository.DeleteAsync(parkingAreaId);
+        await repository.DeleteAsync(parkingAreaId);
         return NoContent();
     }
-
-    private static ParkingAreaDto ToDto(ParkingArea area) => new()
-    {
-        Id = area.Id,
-        Name = area.Name,
-        WeekdayRate = area.WeekdayRate,
-        WeekendRate = area.WeekendRate,
-        DiscountPercentage = area.DiscountPercentage
-    };
 }

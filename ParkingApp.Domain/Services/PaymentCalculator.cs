@@ -3,15 +3,18 @@ using ParkingApp.Domain.ValueObjects;
 
 namespace ParkingApp.Domain.Services;
 
-public static class PaymentCalculator
+public class PaymentCalculator
 {
-    public static decimal Calculate(
+    public decimal Calculate(
         ParkingArea area,
         ParkingTime time)
     {
-        decimal rate = time.IsWeekend ? area.WeekendRate : area.WeekdayRate;
-        decimal total = rate * time.TotalHoursRoundedUp();
-        decimal discountAmount = total * ((decimal)area.DiscountPercentage / 100);
-        return Math.Round(total - discountAmount, 2);
+        decimal rate = time.IsWeekend ? area.Rate.WeekendRate : area.Rate.WeekdayRate;
+        int hours = (int)Math.Ceiling(time.TotalDuration.TotalHours);
+        decimal total = rate * hours;
+        decimal discountAmount = total * (area.DiscountPercentage / 100);
+
+        decimal result = Math.Round(total - discountAmount, 2);
+        return result;
     }
 }

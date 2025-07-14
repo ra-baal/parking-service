@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using ParkingApp.Api.Models;
 using ParkingApp.Domain.Services;
 using ParkingApp.Domain.Entities;
 using ParkingApp.Infrastructure.Repositories;
+using ParkingApp.Domain.ValueObjects;
+using ParkingApp.Domain.Constants;
+using ParkingApp.Api.Models.Dtos;
+using ParkingApp.Api.Models.Requests;
 
 namespace ParkingApp.Api.Controllers;
 
@@ -12,6 +15,8 @@ public class PaymentsController(
     IParkingAreaRepository areaRepository,
     ICurrencyConverter currencyConverter) : ControllerBase
 {
+    private readonly PaymentCalculator calculator = new();
+
     [HttpPost("calculate")]
     public async Task<ActionResult<PaymentResultDto>> Calculate([FromBody] PaymentRequest request)
     {
@@ -20,39 +25,30 @@ public class PaymentsController(
         ParkingArea? area = await areaRepository.GetByIdAsync(request.ParkingAreaId);
         if (area == null) return NotFound("Id not found.");
 
-        TimeSpan duration = request.EndTime - request.StartTime;
-        if (duration.TotalMinutes <= 0)
-            return BadRequest("Time invalid.");
-
-        decimal totalCost = 0;
-        DateTimeOffset current = request.StartTime;
-
-        while (current < request.EndTime)
+        try
         {
-            DateTimeOffset nextHour = current.AddHours(1);
-            if (nextHour > request.EndTime)
-                nextHour = request.EndTime;
+            ParkingTime parkingTime = new ParkingTime(request.StartTime, request.EndTime);
 
-            bool isWeekend = current.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-            decimal rate = isWeekend ? area.WeekendRate : area.WeekdayRate;
-            double hourFraction = (nextHour - current).TotalHours;
+            decimal finalUsd = calculator.Calculate(area, parkingTime);
 
-            totalCost += rate * (decimal)hourFraction;
-            current = nextHour;
+            DateOnly? rateDate = parkingTime.Date < DateOnly.FromDateTime(now.Date) 
+                ? DateOnly.FromDateTime(request.EndTime.Date) 
+                : null;
+
+            Dictionary<string, decimal> converted = await currencyConverter.ConvertAsync(finalUsd, CurrencyCodes.USD, rateDate);
+
+            PaymentResultDto result = new PaymentResultDto
+            {
+                AmountUSD = finalUsd,
+                AmountEUR = converted.ContainsKey(CurrencyCodes.EUR) ? converted[CurrencyCodes.EUR] : null,
+                AmountPLN = converted.ContainsKey(CurrencyCodes.PLN) ? converted[CurrencyCodes.PLN] : null
+            };
+
+            return Ok(result);
         }
-
-        decimal finalUsd = Math.Round((decimal)totalCost * (1 - (decimal)area.DiscountPercentage / 100), 2);
-
-        DateOnly? rateDate = request.EndTime.Date < now.Date ? DateOnly.FromDateTime(request.EndTime.Date) : null;
-        Dictionary<string, decimal> converted = await currencyConverter.ConvertAsync(finalUsd, "USD", rateDate);
-
-        PaymentResultDto result = new PaymentResultDto
+        catch (ArgumentException ex)
         {
-            AmountUSD = finalUsd,
-            AmountEUR = converted.ContainsKey("EUR") ? converted["EUR"] : null,
-            AmountPLN = converted.ContainsKey("PLN") ? converted["PLN"] : null
-        };
-
-        return Ok(result);
+            return BadRequest(ex.Message);
+        }
     }
 }

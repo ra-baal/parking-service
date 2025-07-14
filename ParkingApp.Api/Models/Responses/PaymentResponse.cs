@@ -1,4 +1,4 @@
-﻿namespace ParkingApp.Api.Models;
+﻿namespace ParkingApp.Api.Models.Responses;
 
 public class PaymentResponse
 {

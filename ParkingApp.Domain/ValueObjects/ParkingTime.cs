@@ -2,21 +2,31 @@
 
 public class ParkingTime
 {
-    public DateTime Start { get; init; }
-    public DateTime End { get; init; }
-    public DayOfWeek Day { get; init; }
+    public DateOnly Date { get; init; }
+    public TimeOnly Start { get; init; }
+    public TimeOnly End { get; init; }
 
-
-    public ParkingTime(DateTime start, DateTime end)
-    {
-        if (end <= start) throw new ArgumentException("End must be after start");
-        Start = start;
-        End = end;
-        Day = start.DayOfWeek;
+    public ParkingTime(DateTimeOffset start, DateTimeOffset end) 
+        : this(DateOnly.FromDateTime(start.Date), TimeOnly.FromDateTime(start.DateTime), TimeOnly.FromDateTime(end.DateTime))
+    { 
+        if (start.Date != end.Date)
+        {
+            throw new ArgumentException("Start and ends must be same day");
+        }
     }
 
-    public int TotalHoursRoundedUp() => (int)Math.Ceiling(TotalDuration.TotalHours);
+    public ParkingTime(DateOnly date, TimeOnly start, TimeOnly end)
+    {
+        if (end <= start)
+        {
+            throw new ArgumentException("End must be after start");
+        }
+
+        Date = date;
+        Start = start;
+        End = end;
+    }
+
     public TimeSpan TotalDuration => End - Start;
-    public bool IsWeekend => Day == DayOfWeek.Saturday || Day == DayOfWeek.Sunday;
-    
+    public bool IsWeekend => Date.DayOfWeek == DayOfWeek.Saturday || Date.DayOfWeek == DayOfWeek.Sunday;
 }

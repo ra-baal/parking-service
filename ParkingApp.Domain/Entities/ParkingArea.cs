@@ -1,10 +1,11 @@
-﻿namespace ParkingApp.Domain.Entities;
+﻿using ParkingApp.Domain.ValueObjects;
+
+namespace ParkingApp.Domain.Entities;
 
 public class ParkingArea
 {
     public string Id { get; set; } = null!;
-    public string Name { get; set; } = null!;
-    public decimal WeekdayRate { get; set; }
-    public decimal WeekendRate { get; set; }
-    public double DiscountPercentage { get; set; } // e.g., 10 for 10%
+    public required string Name { get; set; }
+    public required ParkingRate Rate { get; set; }
+    public decimal DiscountPercentage { get; set; }
 }
