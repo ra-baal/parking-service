@@ -3,7 +3,7 @@
 ## Clean Architecture 
 
 ```mermaid
-graph TD
+graph LR
 	Api[API]
 	Dom[Domain]
 	Inf[Infrastructure]
