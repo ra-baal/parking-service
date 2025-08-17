@@ -20,12 +20,10 @@ public class ParkingAreasController(
         return Ok(areas.Select(ParkingAreaMapper.ToDto));
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult<ParkingAreaDto>> GetById(string id)
+    [HttpGet("by-id")]
+    public async Task<ActionResult<ParkingAreaDto>> GetById([FromQuery] string id)
     {
-        string parkingAreaId = $"ParkingAreas/{id}";
-
-        ParkingArea? area = await repository.GetByIdAsync(parkingAreaId);
+        ParkingArea? area = await repository.GetByIdAsync(id);
         if (area == null) return NotFound();
 
         ParkingAreaDto dto = ParkingAreaMapper.ToDto(area);
@@ -46,12 +44,10 @@ public class ParkingAreasController(
         return CreatedAtAction(nameof(GetById), new { id = newArea.Id }, ParkingAreaMapper.ToDto(newArea));
     }
 
-    [HttpPut("{id}")]
-    public async Task<ActionResult> Update(string id, UpdateParkingAreaRequest request)
+    [HttpPut]
+    public async Task<ActionResult> Update([FromQuery] string id, [FromBody] UpdateParkingAreaRequest request)
     {
-        string parkingAreaId = $"ParkingAreas/{id}";
-
-        ParkingArea? existing = await repository.GetByIdAsync(parkingAreaId);
+        ParkingArea? existing = await repository.GetByIdAsync(id);
         if (existing is null) return NotFound();
 
         existing.Name = request.Name;
@@ -62,15 +58,13 @@ public class ParkingAreasController(
         return NoContent();
     }
 
-    [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete(string id)
+    [HttpDelete]
+    public async Task<ActionResult> Delete([FromQuery] string id)
     {
-        string parkingAreaId = $"ParkingAreas/{id}";
-
-        ParkingArea? existing = await repository.GetByIdAsync(parkingAreaId);
+        ParkingArea? existing = await repository.GetByIdAsync(id);
         if (existing is null) return NotFound();
 
-        await repository.DeleteAsync(parkingAreaId);
+        await repository.DeleteAsync(id);
         return NoContent();
     }
 }

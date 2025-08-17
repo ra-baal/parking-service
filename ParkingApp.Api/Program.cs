@@ -1,6 +1,5 @@
 using ParkingApp.Infrastructure.RavenDb;
 using ParkingApp.Infrastructure.Repositories;
-using ParkingApp.Infrastructure.Raven;
 using Raven.Client.Documents;
 using ParkingApp.Domain.Services;
 using ParkingApp.Infrastructure.Services;
@@ -27,7 +26,6 @@ ConfigureExchangeRatesApiClient(builder.Services, builder.Configuration);
 builder.Services.AddScoped<PaymentCalculator>();
 builder.Services.AddScoped<CurrencyConverter>();
 
-// Kontrolery.
 builder.Services.AddControllers();
 
 WebApplication app = builder.Build();
@@ -45,7 +43,6 @@ else
 
 app.UseHttpsRedirection();
 
-// Kontrolery.
 app.MapControllers();
 
 app.Run();
@@ -54,7 +51,7 @@ static void ConfigureRavenDb(IServiceCollection services, IConfiguration configu
 {
     RavenDbSettings settings = configuration
         .GetSection("RavenDb")
-        .Get<RavenDbSettings>() ?? throw new InvalidOperationException("Brak ustawieñ RavenDb.");
+        .Get<RavenDbSettings>() ?? throw new InvalidOperationException("No RavenDB settings");
 
     services.AddSingleton(settings);
     services.AddSingleton<RavenDbFactory>();
@@ -66,7 +63,6 @@ static void ConfigureRavenDb(IServiceCollection services, IConfiguration configu
     });
 
     services.AddScoped<IParkingAreaRepository, ParkingAreaRepository>();
-    services.AddHostedService<RavenDbStartupService>();
 }
 
 static void ConfigureExchangeRatesApiClient(IServiceCollection services, ConfigurationManager configuration)
