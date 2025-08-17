@@ -1,7 +1,6 @@
 # parking-service
 
-## Clean Architecture 
-
+## Project Dependencies (Clean Architecture)
 ```mermaid
 graph LR
 	Api[API]
